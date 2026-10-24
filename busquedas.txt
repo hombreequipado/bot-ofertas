@@ -1,0 +1,58 @@
+# Lo que el bot vigila en Mercado Libre.
+# Formato:  categoria | lo que escribirias en el buscador
+# Categorias validas: gym, escuela, relojes, carro, perfumes, ropa, gaming, setup, cuidado
+# Puedes agregar o borrar lineas cuando quieras. Las que empiezan con # se ignoran.
+
+gym | shaker proteina
+gym | guantes gym hombre
+gym | cinturon levantamiento pesas
+gym | bandas de resistencia
+gym | mancuernas ajustables
+gym | creatina monohidratada
+gym | proteina whey
+
+escuela | mochila antirrobo laptop
+escuela | lampara escritorio led
+escuela | audifonos bluetooth
+escuela | soporte laptop
+escuela | termo acero inoxidable
+
+relojes | reloj casio hombre
+relojes | reloj hombre acero
+relojes | smartwatch hombre
+relojes | reloj invicta hombre
+
+carro | soporte celular auto
+carro | cargador auto carga rapida
+carro | aromatizante auto
+carro | aspiradora auto portatil
+carro | kit limpieza auto
+
+perfumes | perfume arabe hombre
+perfumes | perfume hombre original
+perfumes | lattafa hombre
+perfumes | armaf club de nuit
+
+ropa | playeras basicas hombre paquete
+ropa | gorra new era
+ropa | tenis hombre
+ropa | sudadera hombre
+ropa | cartera hombre piel
+ropa | lentes de sol hombre
+
+gaming | control xbox
+gaming | control ps5
+gaming | mouse gamer
+gaming | teclado mecanico
+gaming | audifonos gamer
+
+setup | microfono usb
+setup | aro de luz led
+setup | tripie celular
+setup | luces led habitacion
+
+cuidado | rasuradora electrica hombre
+cuidado | recortadora barba
+cuidado | aceite para barba
+cuidado | kit cuidado facial hombre
+cuidado | cera para cabello hombre
