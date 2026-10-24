@@ -1,0 +1,36 @@
+name: Diagnostico Telegram
+
+on:
+  workflow_dispatch: {}
+
+jobs:
+  probar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Revisar bot y canal
+        env:
+          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+          CHANNEL_ID: ${{ secrets.CHANNEL_ID }}
+        run: |
+          python3 - <<'EOF'
+          import json, os, urllib.parse, urllib.request, urllib.error
+          tok = os.environ["TELEGRAM_TOKEN"].strip()
+          canal = os.environ["CHANNEL_ID"].strip()
+          print("Largo del token:", len(tok), "| tiene ':' :", ":" in tok)
+          print("Canal configurado:", canal)
+          def tg(m, **d):
+              req = urllib.request.Request(f"https://api.telegram.org/bot{tok}/{m}", data=urllib.parse.urlencode(d).encode())
+              try:
+                  with urllib.request.urlopen(req, timeout=20) as r:
+                      return json.loads(r.read().decode())
+              except urllib.error.HTTPError as e:
+                  return json.loads(e.read().decode())
+          me = tg("getMe")
+          print("BOT:", (me.get("result") or {}).get("username"), "|", me.get("description", "ok"))
+          ch = tg("getChat", chat_id=canal)
+          print("CANAL:", json.dumps(ch.get("result", ch), ensure_ascii=False)[:300])
+          if me.get("ok") and ch.get("ok"):
+              m = tg("getChatMember", chat_id=canal, user_id=me["result"]["id"])
+              print("ROL DEL BOT EN EL CANAL:", json.dumps(m.get("result", m), ensure_ascii=False)[:300])
+          EOF
