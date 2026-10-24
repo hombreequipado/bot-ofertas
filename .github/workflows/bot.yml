@@ -1,0 +1,62 @@
+name: Bot de ofertas
+
+on:
+  schedule:
+    # Cada 15 minutos de 8:00 a 23:00 hora de CDMX (14:00 a 05:00 UTC)
+    - cron: "*/15 14-23 * * *"
+    - cron: "*/15 0-4 * * *"
+  workflow_dispatch:
+    inputs:
+      codigo_ml:
+        description: "Solo la primera vez: el codigo TG-... de Mercado Libre"
+        required: false
+        default: ""
+
+permissions:
+  contents: write
+
+concurrency:
+  group: bot-ofertas
+  cancel-in-progress: false
+
+jobs:
+  ronda:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    env:
+      TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+      CHANNEL_ID: ${{ secrets.CHANNEL_ID }}
+      ML_CLIENT_ID: ${{ secrets.ML_CLIENT_ID }}
+      ML_CLIENT_SECRET: ${{ secrets.ML_CLIENT_SECRET }}
+      ML_ACCESS_TOKEN: ${{ secrets.ML_ACCESS_TOKEN }}
+      ML_REFRESH_TOKEN: ${{ secrets.ML_REFRESH_TOKEN }}
+      ML_TOKEN_EXPIRA: ${{ secrets.ML_TOKEN_EXPIRA }}
+      GH_TOKEN: ${{ secrets.GH_PAT }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Conectar Mercado Libre (solo la primera vez)
+        if: ${{ inputs.codigo_ml }}
+        env:
+          CODIGO: ${{ inputs.codigo_ml }}
+        run: python bot.py --configurar "$CODIGO"
+
+      - name: Ronda del bot
+        if: ${{ !inputs.codigo_ml }}
+        run: python bot.py
+
+      - name: Guardar el estado
+        if: always()
+        run: |
+          git config user.name "bot-ofertas"
+          git config user.email "bot-ofertas@users.noreply.github.com"
+          git add estado.json 2>/dev/null || true
+          if ! git diff --cached --quiet; then
+            git commit -m "Estado del bot"
+            git pull --rebase --quiet || true
+            git push
+          fi
