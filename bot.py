@@ -26,6 +26,7 @@ import json
 import os
 import re
 import sys
+import urllib.error
 import urllib.parse
 import urllib.request
 from datetime import datetime, timedelta, timezone
@@ -134,8 +135,12 @@ def telegram(token, metodo, datos):
     datos = {k: (json.dumps(v) if isinstance(v, (dict, list)) else v) for k, v in datos.items()}
     req = urllib.request.Request(f"https://api.telegram.org/bot{token}/{metodo}",
                                  data=urllib.parse.urlencode(datos).encode())
-    with urllib.request.urlopen(req, timeout=30) as r:
-        return json.loads(r.read().decode())
+    try:
+        with urllib.request.urlopen(req, timeout=30) as r:
+            return json.loads(r.read().decode())
+    except urllib.error.HTTPError as e:
+        detalle = e.read().decode(errors="replace")
+        raise RuntimeError(f"Telegram {metodo} {e.code}: {detalle}") from None
 
 
 def publicar(token, canal, f):
