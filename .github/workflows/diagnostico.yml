@@ -1,7 +1,12 @@
 name: Diagnostico Mercado Libre
 
 on:
-  workflow_dispatch: {}
+  workflow_dispatch:
+    inputs:
+      codigo:
+        description: "Codigo TG-... (opcional, para probar con tu permiso de usuario)"
+        required: false
+        default: ""
 
 jobs:
   probar:
@@ -12,6 +17,7 @@ jobs:
         env:
           ML_CLIENT_ID: ${{ secrets.ML_CLIENT_ID }}
           ML_CLIENT_SECRET: ${{ secrets.ML_CLIENT_SECRET }}
+          CODIGO: ${{ inputs.codigo }}
         run: |
           python3 - <<'EOF'
           import json, os, urllib.parse, urllib.request, urllib.error
@@ -27,9 +33,16 @@ jobs:
                       return r.status, json.loads(r.read().decode())
               except urllib.error.HTTPError as e:
                   return e.code, e.read().decode()[:200]
-          st, tok = pedir("/oauth/token", datos={"grant_type": "client_credentials",
-              "client_id": os.environ["ML_CLIENT_ID"], "client_secret": os.environ["ML_CLIENT_SECRET"]})
-          print("TOKEN", st)
+          codigo = os.environ.get("CODIGO", "").strip()
+          if codigo:
+              st, tok = pedir("/oauth/token", datos={"grant_type": "authorization_code",
+                  "client_id": os.environ["ML_CLIENT_ID"], "client_secret": os.environ["ML_CLIENT_SECRET"],
+                  "code": codigo, "redirect_uri": "https://www.google.com/"})
+              print("TOKEN DE USUARIO", st, "" if st == 200 else tok)
+          else:
+              st, tok = pedir("/oauth/token", datos={"grant_type": "client_credentials",
+                  "client_id": os.environ["ML_CLIENT_ID"], "client_secret": os.environ["ML_CLIENT_SECRET"]})
+              print("TOKEN DE APP", st)
           token = tok["access_token"] if st == 200 else None
           def ver(nombre, ruta):
               st, d = pedir(ruta, token)
