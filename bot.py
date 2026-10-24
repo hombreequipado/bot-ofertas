@@ -11,21 +11,12 @@ Secrets que usa (se configuran en GitHub):
   CHANNEL_ID         @usuario del canal
   ML_CLIENT_ID       id de tu app de Mercado Libre
   ML_CLIENT_SECRET   clave secreta de tu app de Mercado Libre
-  ML_ACCESS_TOKEN    (lo llena el bot solo)
-  ML_REFRESH_TOKEN   (lo llena el bot solo)
-  ML_TOKEN_EXPIRA    (lo llena el bot solo)
-  GH_PAT             token de GitHub para que el bot pueda renovar los de arriba
-
-Uso:
-  python bot.py                      ronda normal
-  python bot.py --configurar CODIGO  conecta tu app de Mercado Libre (una vez)
 """
 
 import json
 import os
 import re
 import statistics
-import subprocess
 import sys
 import time
 import urllib.error
@@ -54,7 +45,6 @@ PUBLICACIONES_POR_RONDA = 4                   # para no saturar el canal
 PUBLICACIONES_POR_DIA = 40
 REPUTACIONES_OK = ("5_green", "4_light_green")
 
-REDIRECT_URI = "https://www.google.com/"
 CARPETA = os.path.dirname(os.path.abspath(__file__))
 ARCHIVO_ESTADO = os.path.join(CARPETA, "estado.json")
 ARCHIVO_BUSQUEDAS = os.path.join(CARPETA, "busquedas.txt")
@@ -156,59 +146,28 @@ def pesos(valor):
 # ------------------------------- Mercado Libre ----------------------------
 
 class MercadoLibre:
+    """Acceso a la API con el flujo Client Credentials: el bot pide su propio
+    permiso en cada ronda usando el Client ID y el Client Secret de tu app."""
     API = "https://api.mercadolibre.com"
 
     def __init__(self):
         self.client_id = os.environ.get("ML_CLIENT_ID", "").strip()
         self.secret = os.environ.get("ML_CLIENT_SECRET", "").strip()
-        self.access = os.environ.get("ML_ACCESS_TOKEN", "").strip()
-        self.refresh = os.environ.get("ML_REFRESH_TOKEN", "").strip()
-        try:
-            self.expira = float(os.environ.get("ML_TOKEN_EXPIRA", "0") or 0)
-        except ValueError:
-            self.expira = 0
-
-    # --- tokens ---
-    def canjear_codigo(self, codigo):
-        r = pedir(self.API + "/oauth/token", {
-            "grant_type": "authorization_code", "client_id": self.client_id,
-            "client_secret": self.secret, "code": codigo.strip(),
-            "redirect_uri": REDIRECT_URI}, {"Accept": "application/json"})
-        self._guardar_tokens(r)
-
-    def renovar(self):
-        if not (self.refresh and self.client_id and self.secret):
-            return False
-        r = pedir(self.API + "/oauth/token", {
-            "grant_type": "refresh_token", "client_id": self.client_id,
-            "client_secret": self.secret, "refresh_token": self.refresh},
-            {"Accept": "application/json"})
-        self._guardar_tokens(r)
-        return True
-
-    def _guardar_tokens(self, r):
-        self.access = r["access_token"]
-        self.refresh = r.get("refresh_token", self.refresh)
-        self.expira = time.time() + int(r.get("expires_in", 21600))
-        guardar_secret("ML_ACCESS_TOKEN", self.access)
-        guardar_secret("ML_REFRESH_TOKEN", self.refresh)
-        guardar_secret("ML_TOKEN_EXPIRA", str(int(self.expira)))
-        log("Tokens de Mercado Libre renovados.")
+        self.access = ""
 
     def preparar(self):
-        if self.refresh and time.time() > self.expira - 1800:
-            self.renovar()
+        if not (self.client_id and self.secret):
+            log("Sin ML_CLIENT_ID / ML_CLIENT_SECRET: se intenta sin permiso.")
+            return
+        r = pedir(self.API + "/oauth/token", {
+            "grant_type": "client_credentials", "client_id": self.client_id,
+            "client_secret": self.secret}, {"Accept": "application/json"})
+        self.access = r["access_token"]
+        log("Permiso de Mercado Libre obtenido.")
 
-    # --- consultas ---
     def get(self, ruta):
         enc = {"Authorization": f"Bearer {self.access}"} if self.access else {}
-        try:
-            return pedir(self.API + ruta, encabezados=enc)
-        except urllib.error.HTTPError as e:
-            if e.code == 401 and self.renovar():
-                return pedir(self.API + ruta,
-                             encabezados={"Authorization": f"Bearer {self.access}"})
-            raise
+        return pedir(self.API + ruta, encabezados=enc)
 
     def buscar(self, consulta):
         q = urllib.parse.urlencode({"q": consulta, "limit": RESULTADOS_POR_BUSQUEDA,
@@ -218,15 +177,6 @@ class MercadoLibre:
     def reputacion(self, seller_id):
         datos = self.get(f"/users/{seller_id}")
         return (datos.get("seller_reputation") or {}).get("level_id") or ""
-
-
-def guardar_secret(nombre, valor):
-    """Actualiza un secret del repositorio con el CLI de GitHub (usa GH_PAT)."""
-    if not os.environ.get("GH_TOKEN"):
-        log(f"Sin GH_PAT: no se guardo {nombre}.")
-        return
-    subprocess.run(["gh", "secret", "set", nombre, "--body", valor],
-                   check=True, capture_output=True)
 
 
 # ------------------------------- deteccion --------------------------------
@@ -396,11 +346,6 @@ def toca_buscar(estado):
 
 
 def main():
-    if len(sys.argv) >= 3 and sys.argv[1] == "--configurar":
-        MercadoLibre().canjear_codigo(sys.argv[2])
-        log("Listo: Mercado Libre conectado.")
-        return
-
     token = os.environ.get("TELEGRAM_TOKEN", "").strip()
     canal = os.environ.get("CHANNEL_ID", "").strip()
     if not token or not canal:
