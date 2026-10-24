@@ -28,7 +28,7 @@ jobs:
       - name: Publicar una oferta
         env:
           TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
-          CHANNEL_ID: ${{ secrets.CHANNEL_ID }}
+          CHANNEL_ID: "@loquetodohombrenecesita7"
         run: python bot.py
 
       - name: Guardar que ya se publico
