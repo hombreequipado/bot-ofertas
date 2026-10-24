@@ -1,0 +1,51 @@
+name: Diagnostico Mercado Libre
+
+on:
+  workflow_dispatch: {}
+
+jobs:
+  probar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Probar que partes de la API responden
+        env:
+          ML_CLIENT_ID: ${{ secrets.ML_CLIENT_ID }}
+          ML_CLIENT_SECRET: ${{ secrets.ML_CLIENT_SECRET }}
+        run: |
+          python3 - <<'EOF'
+          import json, os, urllib.parse, urllib.request, urllib.error
+          API = "https://api.mercadolibre.com"
+          def pedir(ruta, token=None, datos=None):
+              req = urllib.request.Request(API + ruta,
+                  data=urllib.parse.urlencode(datos).encode() if datos else None,
+                  headers={"Accept": "application/json", "User-Agent": "BotOfertasLQTHN/1.0"})
+              if token:
+                  req.add_header("Authorization", f"Bearer {token}")
+              try:
+                  with urllib.request.urlopen(req, timeout=30) as r:
+                      return r.status, json.loads(r.read().decode())
+              except urllib.error.HTTPError as e:
+                  return e.code, e.read().decode()[:200]
+          st, tok = pedir("/oauth/token", datos={"grant_type": "client_credentials",
+              "client_id": os.environ["ML_CLIENT_ID"], "client_secret": os.environ["ML_CLIENT_SECRET"]})
+          print("TOKEN", st)
+          token = tok["access_token"] if st == 200 else None
+          def ver(nombre, ruta):
+              st, d = pedir(ruta, token)
+              print(f"\n== {nombre} [{st}] {ruta}")
+              print(json.dumps(d, ensure_ascii=False)[:700] if not isinstance(d, str) else d)
+              return st, d
+          ver("busqueda", "/sites/MLM/search?q=reloj%20casio&limit=2")
+          ver("busqueda productos", "/products/search?status=active&site_id=MLM&q=reloj%20casio")
+          ver("categorias", "/sites/MLM/categories")
+          st, h = ver("mas vendidos relojes", "/highlights/MLM/category/MLM26287")
+          if st == 200 and isinstance(h, dict) and h.get("content"):
+              for c in h["content"][:3]:
+                  if c.get("type") == "PRODUCT":
+                      ver("producto", f"/products/{c['id']}")
+                      ver("producto items", f"/products/{c['id']}/items")
+                  else:
+                      ver("item", f"/items/{c['id']}")
+                      ver("item precios", f"/items/{c['id']}/prices")
+          EOF
