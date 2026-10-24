@@ -2,10 +2,10 @@ name: Bot de ofertas
 
 on:
   schedule:
-    # Cada 15 minutos de 8:00 a 23:00 hora de CDMX (14:00 a 05:00 UTC)
-    - cron: "*/15 14-23 * * *"
-    - cron: "*/15 0-4 * * *"
-  workflow_dispatch: {}   # boton "Run workflow" para probar a mano
+    # Cada hora de 10:00 a 21:00 hora de CDMX (16:00 a 03:00 UTC)
+    - cron: "0 16-23 * * *"
+    - cron: "0 0-3 * * *"
+  workflow_dispatch: {}   # boton "Run workflow" para publicar una ya
 
 permissions:
   contents: write
@@ -15,9 +15,9 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  ronda:
+  publicar:
     runs-on: ubuntu-latest
-    timeout-minutes: 8
+    timeout-minutes: 5
     steps:
       - uses: actions/checkout@v4
 
@@ -25,22 +25,19 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Ronda del bot
+      - name: Publicar una oferta
         env:
           TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
           CHANNEL_ID: ${{ secrets.CHANNEL_ID }}
-          ML_CLIENT_ID: ${{ secrets.ML_CLIENT_ID }}
-          ML_CLIENT_SECRET: ${{ secrets.ML_CLIENT_SECRET }}
         run: python bot.py
 
-      - name: Guardar el estado
-        if: always()
+      - name: Guardar que ya se publico
         run: |
           git config user.name "bot-ofertas"
           git config user.email "bot-ofertas@users.noreply.github.com"
-          git add estado.json 2>/dev/null || true
+          git add ofertas.csv
           if ! git diff --cached --quiet; then
-            git commit -m "Estado del bot"
+            git commit -m "Oferta publicada"
             git pull --rebase --quiet || true
             git push
           fi
