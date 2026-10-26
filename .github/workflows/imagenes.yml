@@ -1,0 +1,34 @@
+name: Bajar imagenes
+
+on:
+  push:
+    paths: ["imagenes.txt"]
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+jobs:
+  bajar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Descargar fotos
+        run: |
+          mkdir -p imgs
+          while read -r nombre url; do
+            [ -z "$nombre" ] && continue
+            curl -sSL -A "Mozilla/5.0" -o "imgs/$nombre.jpg" "$url" || echo "fallo $nombre"
+          done < imagenes.txt
+          ls -la imgs
+      - name: Guardar
+        run: |
+          git config user.name "bot-ofertas"
+          git config user.email "bot-ofertas@users.noreply.github.com"
+          git add imgs
+          if ! git diff --cached --quiet; then
+            git commit -m "Fotos para videos"
+            git pull --rebase --quiet || true
+            git push
+          fi
