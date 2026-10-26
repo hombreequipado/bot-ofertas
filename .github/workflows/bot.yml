@@ -2,9 +2,9 @@ name: Bot de ofertas
 
 on:
   schedule:
-    # Cada hora de 10:00 a 21:00 hora de CDMX (16:00 a 03:00 UTC)
-    - cron: "0 16-23 * * *"
-    - cron: "0 0-3 * * *"
+    # Cada 20 minutos de 10:00 a 21:40 hora de CDMX (16:00 a 03:40 UTC)
+    - cron: "7,27,47 16-23 * * *"
+    - cron: "7,27,47 0-3 * * *"
   workflow_dispatch: {}   # boton "Run workflow" para publicar una ya
 
 permissions:
