@@ -26,6 +26,7 @@ import json
 import os
 import re
 import sys
+import time
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -157,6 +158,14 @@ def publicar(token, canal, f):
                                            "disable_web_page_preview": "true"})
 
 
+def esperadas_hasta(momento):
+    """Cuantas publicaciones deberian llevarse hoy segun el horario (cada 20 min desde las 10:07)."""
+    inicio = momento.replace(hour=HORA_INICIO, minute=7, second=0, microsecond=0)
+    if momento < inicio:
+        return 0
+    return min(int((momento - inicio).total_seconds() // (20 * 60)) + 1, 36)
+
+
 def main():
     prueba = "--prueba" in sys.argv
     momento = ahora()
@@ -166,27 +175,39 @@ def main():
         return
 
     filas, sep = leer_csv()
-    i = siguiente(filas, momento.date())
-    if i is None:
-        print("No hay ofertas pendientes. Agrega mas a ofertas.csv.")
-        return
-    f = filas[i]
-    if prueba:
-        print(texto(f))
-        print("[Boton]", link_afiliado(f["link"]))
-        return
+    hoy = momento.strftime("%Y-%m-%d")
+    if manual or prueba:
+        cuantas = 1
+    else:
+        # GitHub a veces se salta ejecuciones: si vamos atrasados, ponerse al corriente (max 3)
+        hechas = sum(1 for x in filas if x["publicado"].startswith(hoy))
+        cuantas = max(0, min(3, esperadas_hasta(momento) - hechas))
+        print(f"Hoy van {hechas}; deberian ir {esperadas_hasta(momento)}. Se publican {cuantas}.")
 
     token = os.environ.get("TELEGRAM_TOKEN", "").strip()
     canal = os.environ.get("CHANNEL_ID", "").strip()
-    if not token or not canal:
-        sys.exit("Faltan los secrets TELEGRAM_TOKEN o CHANNEL_ID.")
-    r = publicar(token, canal, f)
-    if not r.get("ok"):
-        sys.exit(f"Telegram respondio con error: {r}")
-    filas[i]["publicado"] = momento.strftime("%Y-%m-%d %H:%M")
-    guardar_csv(filas, sep)
+    for n in range(cuantas):
+        i = siguiente(filas, momento.date())
+        if i is None:
+            print("No hay ofertas pendientes. Agrega mas a ofertas.csv.")
+            break
+        f = filas[i]
+        if prueba:
+            print(texto(f))
+            print("[Boton]", link_afiliado(f["link"]))
+            return
+        if not token or not canal:
+            sys.exit("Faltan los secrets TELEGRAM_TOKEN o CHANNEL_ID.")
+        if n:
+            time.sleep(20)
+        r = publicar(token, canal, f)
+        if not r.get("ok"):
+            sys.exit(f"Telegram respondio con error: {r}")
+        filas[i]["publicado"] = ahora().strftime("%Y-%m-%d %H:%M")
+        guardar_csv(filas, sep)
+        print(f"Publicada: {f['producto']}")
     quedan = sum(1 for x in filas if not x["publicado"] and x["producto"])
-    print(f"Publicada: {f['producto']}. Quedan {quedan} pendientes.")
+    print(f"Quedan {quedan} pendientes.")
 
 
 if __name__ == "__main__":
