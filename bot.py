@@ -136,12 +136,24 @@ def telegram(token, metodo, datos):
     datos = {k: (json.dumps(v) if isinstance(v, (dict, list)) else v) for k, v in datos.items()}
     req = urllib.request.Request(f"https://api.telegram.org/bot{token}/{metodo}",
                                  data=urllib.parse.urlencode(datos).encode())
-    try:
-        with urllib.request.urlopen(req, timeout=30) as r:
-            return json.loads(r.read().decode())
-    except urllib.error.HTTPError as e:
-        detalle = e.read().decode(errors="replace")
-        raise RuntimeError(f"Telegram {metodo} {e.code}: {detalle}") from None
+    # Telegram a veces falla un rato (502/503/504): se reintenta 4 veces antes de rendirse
+    for intento in range(4):
+        try:
+            with urllib.request.urlopen(req, timeout=30) as r:
+                return json.loads(r.read().decode())
+        except urllib.error.HTTPError as e:
+            detalle = e.read().decode(errors="replace")
+            if e.code >= 500 and intento < 3:
+                print(f"Telegram {metodo} {e.code}, reintento en 20 s...")
+                time.sleep(20)
+                continue
+            raise RuntimeError(f"Telegram {metodo} {e.code}: {detalle}") from None
+        except urllib.error.URLError as e:
+            if intento < 3:
+                print(f"Sin conexión con Telegram ({e}), reintento en 20 s...")
+                time.sleep(20)
+                continue
+            raise
 
 
 def publicar(token, canal, f):
