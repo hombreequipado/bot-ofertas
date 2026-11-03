@@ -170,12 +170,14 @@ def publicar(token, canal, f):
                                            "disable_web_page_preview": "true"})
 
 
-def esperadas_hasta(momento):
-    """Cuantas publicaciones deberian llevarse hoy segun el horario (cada 20 min desde las 10:07)."""
+def esperadas_hasta(momento, extra=0):
+    """Cuantas publicaciones deberian llevarse hoy segun el horario (cada 20 min desde las 10:07).
+    'extra' = las que fallaron ayer; se reparten a lo largo del dia."""
     inicio = momento.replace(hour=HORA_INICIO, minute=7, second=0, microsecond=0)
     if momento < inicio:
         return 0
-    return min(int((momento - inicio).total_seconds() // (20 * 60)) + 1, 36)
+    n = min(int((momento - inicio).total_seconds() // (20 * 60)) + 1, 36)
+    return min(round(n * (36 + extra) / 36), 36 + extra)
 
 
 def main():
@@ -193,8 +195,11 @@ def main():
     else:
         # GitHub a veces se salta ejecuciones: si vamos atrasados, ponerse al corriente (max 3)
         hechas = sum(1 for x in filas if x["publicado"].startswith(hoy))
-        cuantas = max(0, min(3, esperadas_hasta(momento) - hechas))
-        print(f"Hoy van {hechas}; deberian ir {esperadas_hasta(momento)}. Se publican {cuantas}.")
+        ayer = (momento - timedelta(days=1)).strftime("%Y-%m-%d")
+        extra = max(0, 36 - sum(1 for x in filas if x["publicado"].startswith(ayer)))
+        meta = esperadas_hasta(momento, extra)
+        cuantas = max(0, min(3, meta - hechas))
+        print(f"Hoy van {hechas}; deberian ir {meta} (incluye {extra} que fallaron ayer). Se publican {cuantas}.")
 
     token = os.environ.get("TELEGRAM_TOKEN", "").strip()
     canal = os.environ.get("CHANNEL_ID", "").strip()
