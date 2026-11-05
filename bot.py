@@ -190,7 +190,7 @@ def main():
 
     filas, sep = leer_csv()
     hoy = momento.strftime("%Y-%m-%d")
-    if manual or prueba:
+    if prueba:
         cuantas = 1
     else:
         # GitHub a veces se salta ejecuciones: si vamos atrasados, ponerse al corriente (max 3)
@@ -198,7 +198,10 @@ def main():
         ayer = (momento - timedelta(days=1)).strftime("%Y-%m-%d")
         extra = max(0, 36 - sum(1 for x in filas if x["publicado"].startswith(ayer)))
         meta = esperadas_hasta(momento, extra)
-        cuantas = max(0, min(3, meta - hechas))
+        # GitHub a veces retrasa las ejecuciones programadas: si vamos muy atrasados, publicar hasta 5
+        cuantas = max(0, min(5 if meta - hechas > 6 else 3, meta - hechas))
+        if manual:
+            cuantas = max(1, cuantas)
         print(f"Hoy van {hechas}; deberian ir {meta} (incluye {extra} que fallaron ayer). Se publican {cuantas}.")
 
     token = os.environ.get("TELEGRAM_TOKEN", "").strip()
