@@ -1,6 +1,4 @@
-vtoman https://http2.mlstatic.com/D_NQ_NP_2X_799896-MLA92597048073_092025-F.jpg
-hidrolav https://http2.mlstatic.com/D_NQ_NP_2X_807752-MLA110825991582_052026-F.jpg
-gato https://http2.mlstatic.com/D_NQ_NP_2X_850792-MLA99928676987_112025-F.jpg
-walkpad https://http2.mlstatic.com/D_NQ_NP_2X_690389-MLA116994836344_102026-F.jpg
-liberty5 https://http2.mlstatic.com/D_NQ_NP_2X_914904-MLA101378390895_122025-F.jpg
-tune770 https://http2.mlstatic.com/D_NQ_NP_2X_920030-MLA99408649598_112025-F.jpg
+powerbank https://http2.mlstatic.com/D_NQ_NP_2X_723824-MLA110354512053_042026-F.jpg
+pistola https://http2.mlstatic.com/D_NQ_NP_2X_754040-MLA116352593284_092026-F.jpg
+redmiwatch6 https://http2.mlstatic.com/D_NQ_NP_2X_985987-MLA110566609097_042026-F.jpg
+huaweiband11 https://http2.mlstatic.com/D_NQ_NP_2X_948374-MLA109595552650_042026-F.jpg
