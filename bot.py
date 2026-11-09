@@ -196,7 +196,7 @@ def main():
         # GitHub a veces se salta ejecuciones: si vamos atrasados, ponerse al corriente (max 3)
         hechas = sum(1 for x in filas if x["publicado"].startswith(hoy))
         ayer = (momento - timedelta(days=1)).strftime("%Y-%m-%d")
-        extra = max(0, 36 - sum(1 for x in filas if x["publicado"].startswith(ayer)))
+        extra = min(6, max(0, 36 - sum(1 for x in filas if x["publicado"].startswith(ayer))))
         meta = esperadas_hasta(momento, extra)
         # GitHub a veces retrasa las ejecuciones programadas: si vamos muy atrasados, publicar hasta 5
         cuantas = max(0, min(5 if meta - hechas > 6 else 3, meta - hechas))
